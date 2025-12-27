@@ -7,7 +7,6 @@ import tensorflow as tf
 from collections import deque
 import time
 import winsound as ws
-import twilio as tw
 
 N8N_WEBHOOK_URL = "https://benjaminphung.app.n8n.cloud/webhook-test/alert"
 last_sent_time = 0
@@ -29,7 +28,7 @@ mp_draw = mp.solutions.drawing_utils
 
 holistic = mp_holistic.Holistic(
     static_image_mode=False,
-    model_complexity=0,        
+    model_complexity=1,        
     smooth_landmarks=True,
     enable_segmentation=False,
     min_detection_confidence=0.3,
@@ -37,7 +36,7 @@ holistic = mp_holistic.Holistic(
 )
 
 
-model = tf.keras.models.load_model("model8.h5")
+model = tf.keras.models.load_model("modelnew.h5")
 
 #Gui len n8n
 def send_n8n(confidence):
@@ -61,9 +60,9 @@ def send_n8n(confidence):
     except Exception as e:
         print("[ERROR] Send to n8n failed:", e)
     
+    
 
 def exponential_smoothing(old, new, alpha=0.3):
-    """Filter làm mượt dự đoán."""
     return alpha * new + (1 - alpha) * old
 
 
@@ -77,7 +76,6 @@ def play_alert_sound():
 
 
 def extract_landmarks(results):
-    """Lấy pose+hands, nguyên bản, không thay đổi."""
     row = []
 
     # Pose
@@ -105,7 +103,7 @@ def extract_landmarks(results):
 
 
 def draw_all_landmarks(mp_drawing, results, img):
-    """Giữ nguyên vẽ như bạn muốn."""
+    
     if results.pose_landmarks:
         mp_drawing.draw_landmarks(
             img, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
@@ -122,7 +120,7 @@ def draw_all_landmarks(mp_drawing, results, img):
 
 
 def detect(model, lm_seq):
-    """Predict trong thread riêng."""
+    
     global prediction_confidence, label, is_predicting
 
     try:
@@ -208,4 +206,3 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 holistic.close()
-
