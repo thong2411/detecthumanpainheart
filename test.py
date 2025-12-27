@@ -1,3 +1,4 @@
+import requests
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -7,6 +8,10 @@ from collections import deque
 import time
 import winsound as ws
 import twilio as tw
+
+N8N_WEBHOOK_URL = "https://benjaminphung.app.n8n.cloud/webhook-test/alert"
+last_sent_time = 0
+SEND_INTERVAL = 15 #tránh spam 
 
 n_time_steps = 40
 lm_list = deque(maxlen=n_time_steps)
@@ -18,8 +23,6 @@ frame_counter = 0
 
 last_beep_time = 0
 beep = 1.0  
-
-url = "rtsp://admin:L2EB9D1A@192.168.1.108:37777/cam/realmonitor?channel=1&subtype=1"
 
 mp_holistic = mp.solutions.holistic
 mp_draw = mp.solutions.drawing_utils
@@ -36,7 +39,27 @@ holistic = mp_holistic.Holistic(
 
 model = tf.keras.models.load_model("model8.h5")
 
-#def send_sms():
+#Gui len n8n
+def send_n8n(confidence):
+    global last_sent_time
+    now = time.time()
+    if now - last_sent_time >= SEND_INTERVAL:
+        return
+    payload = {
+        "event": "HEART_ATTACK_RISK",
+        "confidence": float(confidence),
+        "label": label,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "mediapipe-lstm",
+    }
+
+    try:
+        requests.post(N8N_WEBHOOK_URL, json=payload, timeout=2)
+        last_sent_time = now
+        print("[INFO] Sent alert to n8n")
+
+    except Exception as e:
+        print("[ERROR] Send to n8n failed:", e)
     
 
 def exponential_smoothing(old, new, alpha=0.3):
@@ -174,6 +197,7 @@ while True:
     # Alert
     if label == "Heart pain" and prediction_confidence > 0.82:
         play_alert_sound()
+        send_n8n(prediction_confidence)
 
     cv2.imshow("Heart Pain Detection", frame)
 
@@ -184,3 +208,4 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 holistic.close()
+
